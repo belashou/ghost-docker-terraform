@@ -1,0 +1,120 @@
+---
+- name: Wait for connection
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Wait 30 seconds for the system is up and running
+      ansible.builtin.wait_for_connection:
+        timeout: 30
+
+- name: Install mandatory apps (Docker and Cloudflared)
+  hosts: all
+  become: true
+  vars:
+    cloudflared_marker_path: ~/.cf_configured
+  vars_files:
+    - vars.yml
+  tasks:
+    # Install keys
+    - name: Add Docker GPG apt Key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/debian/gpg
+        state: present
+
+    - name: Add Docker Repository
+      ansible.builtin.apt_repository:
+        repo: deb https://download.docker.com/linux/debian bullseye stable
+        state: present
+
+    - name: Add Cloudflared GPG apt Key
+      ansible.builtin.apt_key:
+        url: https://pkg.cloudflare.com/cloudflare-main.gpg
+        state: present
+
+    - name: Add Cloudflared Repository
+      ansible.builtin.apt_repository:
+        repo: deb https://pkg.cloudflare.com/cloudflared bullseye main
+        state: present
+
+    # Install apps
+    - name: Install required system packages, including Docker and Cloudflared
+      ansible.builtin.apt:
+        pkg:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+          - docker-ce
+          - docker-compose-plugin
+          - cloudflared
+        state: present
+        update_cache: true
+
+    # Config Docker
+    - name: Install Docker Module for Python
+      ansible.builtin.pip:
+        name: docker
+
+    - name: Log into private registry
+      community.docker.docker_login:
+        registry: "{{ docker_registry }}"
+        username: "{{ docker_user }}"
+        password: "{{ docker_password }}"
+
+    # Config Cloudflared
+    - name: Cleanup previous Cloudflared
+      ansible.builtin.command:
+        cmd: cloudflared service uninstall && rm {{ cloudflared_marker_path }}
+        removes: { cloudflared_marker_path }
+
+    - name: Install Cloudflared service
+      ansible.builtin.command:
+        cmd: cloudflared service install {{ tunnel_token }} && touch {{ cloudflared_marker_path }}
+        creates: { cloudflared_marker_path }
+
+- name: Setup app user
+  hosts: all
+  become: true
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Add group "app" to remote node
+      ansible.builtin.group:
+        name: app
+        gid: 1001
+        state: present
+
+    - name: Add the user 'app' with a bash shell, appending the group 'app' to the user's groups
+      ansible.builtin.user:
+        name: app
+        shell: /bin/bash
+        groups: app
+        append: true
+        uid: 1001
+        createhome: true
+        home: /home/app
+
+    - name: Set authorized key taken from file
+      ansible.posix.authorized_key:
+        user: app
+        state: present
+        key: "{{ lookup('file', app_key_pub) }}"
+
+    - name: Add the user 'app' to group 'docker'
+      ansible.builtin.user:
+        name: app
+        shell: /bin/bash
+        groups: docker
+        append: true
+    
+    - name: Create {{ node_base_path }} directory
+      ansible.builtin.file:
+        path: "{{ node_base_path }}"
+        state: directory
+        owner: app
+        group: app
+        mode: '0755'
+

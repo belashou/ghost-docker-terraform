@@ -1,0 +1,118 @@
+version: '3'
+
+services:
+  nginx:
+    build: ./nginx
+    image: ${DOCKER_REGISTRY}/${DOCKER_USER}/${PROJECT}/nginx:latest
+    container_name: nginx
+    hostname: nginx
+    restart: always
+    ports:
+      - 8080:8080
+      - 8090:8090
+    depends_on:
+      ghost:
+        condition: service_started
+      kopia:
+        condition: service_started
+
+  ghost:
+    build: ./ghost
+    image: ${DOCKER_REGISTRY}/${DOCKER_USER}/${PROJECT}/ghost:latest
+    container_name: ghost
+    hostname: ghost
+    expose:
+      - 2368:2368
+    restart: always
+    environment:
+      NODE_ENV: production
+      url: ${URL}
+      database__connection__host: ${MYSQL_HOST}
+      database__connection__port: ${MYSQL_PORT}
+      database__connection__user: ${MYSQL_USER}
+      database__connection__password: ${MYSQL_PASSWORD}
+      database__connection__database: ${MYSQL_DATABASE}
+      mail__from: ${MAIL_FROM}
+      mail__options__host: ${SMTP_HOST}
+      mail__options__port: ${SMTP_PORT}
+      mail__options__auth__user: ${SMTP_USER}
+      mail__options__auth__pass: ${SMTP_PASS}
+      storage__s3__accessKeyId: ${S3_ACCESS_KEY}
+      storage__s3__secretAccessKey: ${S3_SECRET_KEY}
+      storage__s3__region: ${S3_REGION}
+      storage__s3__bucket: ${S3_BUCKET}
+      storage__s3__endpoint: https://${S3_ENDPOINT}
+      storage__s3__assetHost: https://content.${PROJECT}
+    volumes:
+      - ${GHOST_CONTENT_FOLDER_SHARED}:/var/lib/ghost/content:z
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      kopia:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb
+    hostname: ${MYSQL_HOST}
+    volumes:
+      - ${BASE_PATH}/mariadb/mysql:/var/lib/mysql:z
+      - ${MYSQL_BACKUP_FOLDER_SHARED}:${MYSQL_BACKUP_FOLDER_INTERNAL}
+    restart: always
+    expose:
+      - 3306:${MYSQL_PORT}
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_BACKUP_FOLDER_INTERNAL: ${MYSQL_BACKUP_FOLDER_INTERNAL}
+      MYSQL_RESTORE_FROM_BACKUP_ON_START: ${MYSQL_RESTORE_FROM_BACKUP_ON_START}
+    healthcheck:
+      test: healthcheck.sh --su-mysql --connect --innodb_initialized
+      interval: 3s
+      retries: 10
+  
+  kopia:
+    build: ./kopia
+    image: ${DOCKER_REGISTRY}/${DOCKER_USER}/${PROJECT}/kopia:latest
+    hostname: kopia
+    container_name: kopia
+    expose:
+      - 51515:51515
+    restart: always
+    command:
+      - server
+      - start
+      - --disable-csrf-token-checks
+      - --insecure
+      - --address=0.0.0.0:51515
+      - --server-username=${KOPIA_SERVER_USERNAME}
+      - --server-password=${KOPIA_SERVER_PASSWORD}
+    healthcheck:
+      test: curl --fail -u "${KOPIA_SERVER_USERNAME}:${KOPIA_SERVER_PASSWORD}" http://localhost:51515 || exit 1
+      interval: 3s
+      retries: 10
+    environment:
+      ADD_DIR: ${APP_DIR}
+      KOPIA_PASSWORD: ${KOPIA_REPOSITORY_SECRET}
+      USER: ${KOPIA_REPOSITORY_USER}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BACKUP_BUCKET: ${S3_BACKUP_BUCKET}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      GHOST_BACKUP_FOLDER_ON_KOPIA: ${GHOST_BACKUP_FOLDER_ON_KOPIA}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_PORT: ${MYSQL_PORT}
+      MYSQL_ROOT_USER: ${MYSQL_ROOT_USER}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_BACKUP_FOLDER_ON_KOPIA: ${MYSQL_BACKUP_FOLDER_ON_KOPIA}
+      MYSQL_RESTORE_FROM_BACKUP_ON_START: ${MYSQL_RESTORE_FROM_BACKUP_ON_START}
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    volumes:
+      - ${BASE_PATH}/kopia:${APP_DIR}:z
+      - ${GHOST_CONTENT_FOLDER_SHARED}:${GHOST_BACKUP_FOLDER_ON_KOPIA}:z
+      - ${MYSQL_BACKUP_FOLDER_SHARED}:${MYSQL_BACKUP_FOLDER_ON_KOPIA}:z

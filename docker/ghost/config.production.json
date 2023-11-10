@@ -1,0 +1,59 @@
+{
+    "server": {
+        "port": 2368,
+        "host": "0.0.0.0"
+    },
+    "database": {
+        "client": "mysql",
+        "connection": {
+            "host": "__override__",
+            "port": 3306,
+            "user": "__override__",
+            "database": "__override__",
+            "charset": "utf8mb4"
+        }
+    },
+    "mail": {
+        "transport": "SMTP",
+        "from": "__override__",
+        "options": {
+            "service": "Mailgun",
+            "host": "__override__",
+            "port": 465,
+            "secure": true,
+            "auth": {
+                "user": "__override__",
+                "pass": "__override__"
+            }
+        }
+    },
+    "storage": {
+        "active": "s3",
+        "s3": {
+            "accessKeyId": "__override__",
+            "secretAccessKey": "__override__",
+            "region": "__override__",
+            "bucket": "__override__",
+            "pathPrefix": "data",
+            "endpoint": "__override__"
+        }
+    },
+    "logging": {
+        "path": "/var/lib/ghost/content/logs",
+        "useLocalTime": true,
+        "level": "info",
+        "rotation": {
+            "enabled": true,
+            "count": 15,
+            "period": "1d"
+        },
+        "transports": [
+            "file",
+            "stdout"
+        ]
+    },
+    "process": "systemd",
+    "paths": {
+        "contentPath": "/var/lib/ghost/content"
+    }
+}

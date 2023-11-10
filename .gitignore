@@ -1,0 +1,14 @@
+.vscode/*
+
+**/*.env
+
+**/*.backup
+**/*.log
+**/*.lock.hcl
+
+**/node_modules
+
+infra/.terraform
+infra/terraform.tfvars
+
+docker/*.tmp
