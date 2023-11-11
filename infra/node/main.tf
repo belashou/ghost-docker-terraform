@@ -55,7 +55,8 @@ resource "hcloud_server" "node" {
   ssh_keys = [hcloud_ssh_key.key.id]
 
   provisioner "local-exec" {
-    command = nonsensitive("ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u root -i '${self.ipv4_address},' --private-key ${var.root_key_private} -e '${local.ansible_vars}' ./node/ansible/node_playbook.yml -vvvv")
+    # This line can print secrets and shouldn't be used in production. However, it's useful for debugging.
+    command = nonsensitive("ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u root -i '${self.ipv4_address},' --private-key ${var.root_key_private} -e '${local.ansible_vars}' ./node/ansible/node_playbook.yml -vvv")
   }
 
   depends_on = [
