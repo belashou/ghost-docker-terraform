@@ -9,6 +9,7 @@
 **/node_modules
 
 infra/.terraform
-infra/terraform.tfvars
+infra/terraform.tfvars*
+infra/terraform.tfstate
 
 docker/*.tmp
