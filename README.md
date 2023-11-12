@@ -8,7 +8,7 @@ This is an experimental low-end project to run production grade [Ghost](https://
 
 ## Key features
 
-1. [Ghost](https://ghost.org/) blog, run in Docker along with MariaDB and Nginx.
+1. [Ghost](https://ghost.org/) blog, run in Docker along with MySQL and Nginx.
 2. Caching on Nginx level
 3. Automatic backups using [Kopia](https://kopia.io/) to S3-like storage
 4. Render SSH console in the browser using Cloudflare
@@ -46,7 +46,7 @@ This all intentionally comes at the cost of reliability risks. However, the chos
 ## Infrastructure
 
 The infrastructure is built using Terraform. It consists of the following components:
-1. Single node in Hetzner Cloud where all the applications are running on Docker (Ghost, MariaDB, Nginx, Kopia). The node itself doesn't expose ports and doesn't manage SSL certificates - all the traffic is routed through Cloudflare Zero Trust.
+1. Single node in Hetzner Cloud where all the applications are running on Docker (Ghost, MySQL, Nginx, Kopia). The node itself doesn't expose ports and doesn't manage SSL certificates - all the traffic is routed through Cloudflare Zero Trust.
 2. Cloudflare Zero Trust platform that proxies external traffic to the node and manages access to the application. It also manages SSL certificates and rendre SSH console in the browser.
 3. Cloudflare R2 storage for backups and Ghost data, like images
 4. Domain name managed by Cloudflare
@@ -142,7 +142,7 @@ There you can setup backup schedule (or run it manually) and restore Ghost conte
 
 ## Restore DB from backup
 
-Login to Kopia and restore DB dump to `/data/mariadb/backup`. Then run the following command to restore from dump:
+Login to Kopia and restore DB dump to `/data/mysql/backup`. Then run the following command to restore from dump:
 
 ```
 ./cli.sh example.com --restore-db

@@ -46,17 +46,17 @@ services:
     volumes:
       - ${GHOST_CONTENT_FOLDER_SHARED}:/var/lib/ghost/content:z
     depends_on:
-      mariadb:
+      mysql:
         condition: service_healthy
       kopia:
         condition: service_healthy
 
-  mariadb:
-    image: mariadb:latest
-    container_name: mariadb
+  mysql:
+    image: mysql:8
+    container_name: mysql
     hostname: ${MYSQL_HOST}
     volumes:
-      - ${BASE_PATH}/mariadb/mysql:/var/lib/mysql:z
+      - ${BASE_PATH}/mysql/data:/var/lib/mysql:z
       - ${MYSQL_BACKUP_FOLDER_SHARED}:${MYSQL_BACKUP_FOLDER_INTERNAL}
     restart: always
     expose:
@@ -69,7 +69,7 @@ services:
       MYSQL_BACKUP_FOLDER_INTERNAL: ${MYSQL_BACKUP_FOLDER_INTERNAL}
       MYSQL_RESTORE_FROM_BACKUP_ON_START: ${MYSQL_RESTORE_FROM_BACKUP_ON_START}
     healthcheck:
-      test: healthcheck.sh --su-mysql --connect --innodb_initialized
+      test: mysqladmin ping -h 127.0.0.1 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
       interval: 3s
       retries: 10
   
@@ -110,7 +110,7 @@ services:
       MYSQL_BACKUP_FOLDER_ON_KOPIA: ${MYSQL_BACKUP_FOLDER_ON_KOPIA}
       MYSQL_RESTORE_FROM_BACKUP_ON_START: ${MYSQL_RESTORE_FROM_BACKUP_ON_START}
     depends_on:
-      mariadb:
+      mysql:
         condition: service_healthy
     volumes:
       - ${BASE_PATH}/kopia:${APP_DIR}:z

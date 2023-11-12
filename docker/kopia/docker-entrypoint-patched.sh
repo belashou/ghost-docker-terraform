@@ -8,7 +8,6 @@ INIT_FILE=$APP_DIR/.initialized
 # Extract default config, scripts and create symlinks
 if [ ! -f "${INIT_FILE}" ]; then
     cp -a ${APP_ORIG_DIR}/. ${APP_DIR}
-    ln -s ${APP_DIR}/scripts/*.sh /bin
 
     # Substitute vars from config
     # envsubst < ${CONFIG_FILE} > ${CONFIG_FILE}.tmp && mv ${CONFIG_FILE}.tmp ${CONFIG_FILE}
@@ -58,4 +57,6 @@ if [ $? -ne 0 ]; then
         --before-folder-action=backup.sh
 fi
 
+
+ln -s ${APP_DIR}/scripts/*.sh /bin
 exec /bin/kopia $@
