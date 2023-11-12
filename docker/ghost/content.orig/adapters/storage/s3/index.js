@@ -1,4 +1,3 @@
-"use strict";
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -40,6 +39,15 @@ var import_promises = require("fs/promises");
 var stripLeadingSlash = (s) => s.indexOf("/") === 0 ? s.substring(1) : s;
 var stripEndingSlash = (s) => s.indexOf("/") === s.length - 1 ? s.substring(0, s.length - 1) : s;
 var S3Storage = class extends import_ghost_storage_base.default {
+  accessKeyId;
+  secretAccessKey;
+  region;
+  bucket;
+  host;
+  pathPrefix;
+  endpoint;
+  forcePathStyle;
+  acl;
   constructor(config = {}) {
     super();
     const {
@@ -111,13 +119,11 @@ var S3Storage = class extends import_ghost_storage_base.default {
   // Doesn't seem to be documented, but required for using this adapter for other media file types.
   // Seealso: https://github.com/laosb/ghos3/pull/6
   urlToPath(url) {
-    if (URL.canParse(url)) {
-      return new URL(url).pathname;
-    }
-    return url;
+    const parsedUrl = new URL(url);
+    return parsedUrl.pathname;
   }
   async save(image, targetDir) {
-    let directory = targetDir || this.getTargetDir(this.pathPrefix);
+    const directory = targetDir || this.getTargetDir(this.pathPrefix);
     const [fileName, file] = await Promise.all([
       this.getUniqueFileName(image, directory),
       (0, import_promises.readFile)(image.path)
